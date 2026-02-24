@@ -22,35 +22,7 @@ const LoginPage = () => {
       .min(6, "Password must be at least 6 characters")
       .required("Password is required"),
   });
-  // const handleSubmit = async (e) => {
-  //   e.preventDefault();
-
-  //   // call backend
-  //   const res = await fetch("http://localhost:5000/api/auth/login", {
-  //     method: "POST",
-  //     headers: { "Content-Type": "application/json" },
-  //     body: JSON.stringify({ email, password }),
-  //   });
-
-  //   const data = await res.json();
-  //   console.log(data);
-
-  //   if (res.ok) {
-  //     login({
-  //       token: data.token,
-  //       tenant: data.user.tenant,
-  //       name: data.user.name,
-  //       email: data.user.email,
-  //     });
-  //     const tenant = data.user.tenantName;
-  //     console.log(tenant);
-  //     if (tenant) {
-  //       window.location.href = `http://${tenant}.localhost:3000/t/${tenant}/dashboard?token=${data.token}`;
-  //     }
-  //   } else {
-  //     alert(data.message || "Login failed");
-  //   }
-  // };
+  
 
   const handleSubmit = async (values, { setSubmitting }) => {
     try {
