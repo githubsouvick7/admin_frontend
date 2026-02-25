@@ -11,7 +11,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Plus } from "lucide-react";
+import { Edit, Plus, Trash } from "lucide-react";
 import { toast } from "sonner";
 import ConfirmDialog from "@/components/layout/ConfirmDialog";
 import ImageUploader from "@/components/layout/ImageUploader";
@@ -43,8 +43,8 @@ export default function Categories() {
 
     try {
       const res = await fetcher("/api/category/createCategory", "post", {
-        name,
-        image,
+        category_name: name,
+        image: image,
       });
 
       if (!res.ok) throw new Error();
@@ -61,7 +61,7 @@ export default function Categories() {
   const handleUpdate = async () => {
     if (!editItem) return;
     const payload = {
-      name: editItem.name,
+      category_name: editItem.name,
       image: editItem.image,
     };
 
@@ -130,35 +130,51 @@ export default function Categories() {
         </Button>
       </form>
 
-      {/* Category List */}
-      <div className="grid md:grid-cols-3 gap-4">
-        {items?.map((item) => (
-          <div
-            key={item._id}
-            className="border rounded-xl p-4 flex justify-between items-center"
-          >
-            <div>
-              <p className="font-medium">{item.name}</p>
-            </div>
+      <div className="border rounded-xl overflow-hidden">
+        <table className="w-full text-sm">
+          <thead className="bg-muted">
+            <tr className="text-left">
+              <th className="px-4 py-3 w-40">SL No.</th>
+              <th className="px-4 py-3">Category Name</th>
+              <th className="px-4 py-3 text-right">Actions</th>
+            </tr>
+          </thead>
 
-            <div className="flex gap-2">
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => setEditItem(item)}
+          <tbody>
+            {items?.map((item, index) => (
+              <tr
+                key={item._id}
+                className="border-t hover:bg-muted/50 transition-colors"
               >
-                Edit
-              </Button>
-              <Button
-                size="sm"
-                variant="destructive"
-                onClick={() => setDeleteItem(item)}
-              >
-                Delete
-              </Button>
-            </div>
-          </div>
-        ))}
+                <td className="px-4 py-3 font-medium w-40">{index + 1}</td>
+
+                <td className="px-4 py-3">{item.category_name}</td>
+
+                <td className="px-4 py-3">
+                  <div className="flex justify-end gap-2">
+                    <button
+                      className="cursor-pointer p-1 px-2 text-xs rounded-sm flex items-center gap-1 border"
+                      size="xs"
+                      variant="outline"
+                      onClick={() => setEditItem(item)}
+                    >
+                      Edit <Edit className="h-3 w-3 ml-1" />
+                    </button>
+
+                    <button
+                      className="cursor-pointer p-1 px-2 text-xs rounded-sm flex items-center gap-1 border border-red-500 text-red-500"
+                      size="xs"
+                      variant="destructive"
+                      onClick={() => setDeleteItem(item)}
+                    >
+                      Delete <Trash className="h-3 w-3 ml-1" />
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
 
       {/* Edit Dialog */}

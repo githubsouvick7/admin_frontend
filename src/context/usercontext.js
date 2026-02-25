@@ -1,30 +1,71 @@
 "use client";
-import React, { createContext, useContext, useState, useEffect } from "react";
+
+import React, { createContext, useContext, useEffect, useState } from "react";
+import { fetcher } from "@/lib/fetcher";
 
 const UserContext = createContext(null);
 
 export const UserProvider = ({ children }) => {
-  const [user, setUser] = useState(null); // { token, tenant, name, email }
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
 
+  // =============================
+  // Fetch Profile
+  // =============================
+  const fetchProfile = async () => {
+    try {
+      const data = await fetcher("/api/auth/profile");
+
+      setUser({
+        adminId: data.adminId,
+      });
+    } catch (error) {
+      setUser(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // =============================
+  // On Mount
+  // =============================
   useEffect(() => {
-    const storedUser = localStorage.getItem("user");
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
+    const token = localStorage.getItem("token");
+
+    if (token) {
+      fetchProfile();
+    } else {
+      setLoading(false);
     }
   }, []);
 
-  const login = (userData) => {
-    setUser(userData);
+  // =============================
+  // Login
+  // =============================
+  const login = async (token) => {
+    localStorage.setItem("token", token);
+    await fetchProfile();
   };
 
+  // =============================
+  // Logout
+  // =============================
   const logout = () => {
+    localStorage.removeItem("token");
     setUser(null);
-    window.location.href = "http://localhost:3000/login";
-    localStorage.removeItem("authToken");
+    window.location.href = "/login";
   };
 
   return (
-    <UserContext.Provider value={{ user, login, logout }}>
+    <UserContext.Provider
+      value={{
+        user,
+        isAuthenticated: !!user,
+        loading,
+        login,
+        logout,
+      }}
+    >
       {children}
     </UserContext.Provider>
   );

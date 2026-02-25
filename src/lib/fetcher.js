@@ -2,36 +2,46 @@
 
 import axios from "axios";
 
-const BASE_URL = "http://localhost:5000";
+const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5001"; // change if needed
 
 export const fetcher = async (
   endpoint,
   method = "GET",
   data = null,
-  headers = {}
+  customHeaders = {}
 ) => {
   try {
-    const url = `${BASE_URL}${endpoint}`;
-    const defaultHeaders = {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${localStorage.getItem("authToken") || ""}`,
-      ...headers,
-    };
+    const token =
+      typeof window !== "undefined"
+        ? localStorage.getItem("token")
+        : null;
 
-    const config = {
+    const response = await axios({
+      url: `${BASE_URL}${endpoint}`,
       method,
-      url,
-      headers: defaultHeaders,
-      ...(data && { data }),
-    };
+      data,
+      headers: {
+        "Content-Type": "application/json",
+        ...(token && { Authorization: `Bearer ${token}` }),
+        ...customHeaders,
+      },
+    });
 
-    const response = await axios(config);
     return response.data;
   } catch (error) {
-    console.log("API Call Error:", error);
+    const status = error.response?.status;
+
+    // 🔥 Auto logout on 401
+    if (status === 401 && typeof window !== "undefined") {
+      localStorage.removeItem("token");
+      window.location.href = "/login";
+    }
 
     const errorMessage =
-      error.response?.data?.message || error.response?.data || error.message;
+      error.response?.data?.message ||
+      error.response?.data ||
+      error.message;
+
     throw new Error(errorMessage);
   }
 };

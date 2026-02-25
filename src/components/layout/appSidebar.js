@@ -23,7 +23,7 @@ import { useState } from "react";
 import { usePathname } from "next/navigation";
 
 const navItems = [
-  { title: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+  { title: "Dashboard", href: "/", icon: LayoutDashboard },
   { title: "Mobile", href: "/mobile", icon: Smartphone },
   {
     title: "Master Key",

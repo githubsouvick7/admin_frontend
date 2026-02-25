@@ -26,12 +26,11 @@ const LoginPage = () => {
 
   const handleSubmit = async (values, { setSubmitting }) => {
     try {
-      const response = await fetcher("/login", "post", values);
+      const response = await fetcher("/api/auth/login", "POST", values);
 
-      // Store email for OTP verification
-      localStorage.setItem("email", response.email);
+      localStorage.setItem("token", response.token);
 
-      toast.success(response.message, {
+      toast.success("Login successful!", {
         position: "top-right",
         autoClose: 3000,
         hideProgressBar: true,
@@ -42,10 +41,9 @@ const LoginPage = () => {
         transition: Flip,
       });
 
-      // Redirect after login
-      setTimeout(() => {
-        router.push("/auth/verify-otp");
-      }, 1500);
+      router.push("/");
+
+     
     } catch (err) {
       const errorMessage =
         err instanceof Error ? err.message : "An error occurred during login";
