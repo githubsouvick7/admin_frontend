@@ -21,6 +21,7 @@ import {
 import Link from "next/link";
 import { useState } from "react";
 import { usePathname } from "next/navigation";
+import { useUser } from "@/context/usercontext";
 
 const navItems = [
   { title: "Dashboard", href: "/", icon: LayoutDashboard },
@@ -44,6 +45,7 @@ export default function AppSidebar() {
   const pathname = usePathname();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [openItems, setOpenItems] = useState([]);
+  const { logout } = useUser();
 
   const toggleItem = (title) => {
     setOpenItems((prev) =>
@@ -165,14 +167,13 @@ export default function AppSidebar() {
         {!isCollapsed && (
           <div>
             <p className="text-sm font-medium text-[#F9FAFB] truncate">
-              Souvick
+              Smart Mobile Service Admin
             </p>
-            <p className="text-xs text-[#9CA3AF] truncate">
-              souvick@example.com
-            </p>
+            <p className="text-xs text-[#9CA3AF] truncate">admin@example.com</p>
           </div>
         )}
         <Button
+          onClick={logout}
           variant="ghost"
           size={isCollapsed ? "icon" : "default"}
           className="text-[#F9FAFB] hover:bg-[#1F2937]"

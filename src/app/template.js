@@ -15,21 +15,17 @@ export default function Template({ children }) {
   useEffect(() => {
     if (loading) return;
 
-    // 🚫 Not authenticated → redirect to login
     if (!isAuthenticated && !isLoginPage) {
       router.replace("/login");
     }
 
-    // 🚫 Already authenticated → prevent accessing login
     if (isAuthenticated && isLoginPage) {
       router.replace("/");
     }
   }, [isAuthenticated, loading, pathname, router]);
 
-  // Prevent flicker while checking auth
-  if (loading) return null;
+  if (loading) return <div>Loading...</div>;
 
-  // 🟢 If login page → render normally
   if (isLoginPage) {
     return <main>{children}</main>;
   }

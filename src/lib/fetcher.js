@@ -1,8 +1,8 @@
 "use client";
-
 import axios from "axios";
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5001"; // change if needed
+const BASE_URL =
+  "https://api-smart-mobile-service.onrender.com";
 
 export const fetcher = async (
   endpoint,
@@ -27,21 +27,15 @@ export const fetcher = async (
       },
     });
 
-    return response.data;
+    return response.data; // { success, data }
   } catch (error) {
-    const status = error.response?.status;
-
-    // 🔥 Auto logout on 401
-    if (status === 401 && typeof window !== "undefined") {
+    if (error.response?.status === 401 && typeof window !== "undefined") {
       localStorage.removeItem("token");
       window.location.href = "/login";
     }
 
-    const errorMessage =
-      error.response?.data?.message ||
-      error.response?.data ||
-      error.message;
-
-    throw new Error(errorMessage);
+    throw new Error(
+      error.response?.data?.message || error.message
+    );
   }
 };

@@ -19,7 +19,7 @@ export default function ConfirmDialog({ open, onClose, onConfirm, title = "Are y
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <AlertDialogAction onClick={onConfirm} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+          <AlertDialogAction onClick={onConfirm} className="text-white bg-destructive hover:bg-destructive/90">
             Delete
           </AlertDialogAction>
         </AlertDialogFooter>

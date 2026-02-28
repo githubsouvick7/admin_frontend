@@ -153,21 +153,17 @@ export default function Categories() {
                 <td className="px-4 py-3">
                   <div className="flex justify-end gap-2">
                     <button
-                      className="cursor-pointer p-1 px-2 text-xs rounded-sm flex items-center gap-1 border"
-                      size="xs"
-                      variant="outline"
+                      className="p-2 text-sm border flex gap-2 items-center justify-end rounded-full bg-black text-white"
                       onClick={() => setEditItem(item)}
                     >
-                      Edit <Edit className="h-3 w-3 ml-1" />
+                      <Edit className="h-4 w-4" />  
                     </button>
 
                     <button
-                      className="cursor-pointer p-1 px-2 text-xs rounded-sm flex items-center gap-1 border border-red-500 text-red-500"
-                      size="xs"
-                      variant="destructive"
+                      className="p-2 text-sm border flex gap-2 items-center justify-end rounded-full bg-red-500 text-white"
                       onClick={() => setDeleteItem(item)}
                     >
-                      Delete <Trash className="h-3 w-3 ml-1" />
+                      <Trash className="h-4 w-4" />
                     </button>
                   </div>
                 </td>

@@ -9,11 +9,12 @@ import { toast, Flip } from "react-toastify";
 import { useState } from "react";
 import { fetcher } from "@/lib/fetcher";
 import { useRouter } from "next/navigation";
+import { useUser } from "@/context/usercontext";
 
 const LoginPage = () => {
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
-
+  const { login } = useUser();
   const validationSchema = Yup.object({
     email: Yup.string()
       .email("Invalid email format")
@@ -22,7 +23,6 @@ const LoginPage = () => {
       .min(6, "Password must be at least 6 characters")
       .required("Password is required"),
   });
-  
 
   const handleSubmit = async (values, { setSubmitting }) => {
     try {
@@ -30,34 +30,10 @@ const LoginPage = () => {
 
       localStorage.setItem("token", response.token);
 
-      toast.success("Login successful!", {
-        position: "top-right",
-        autoClose: 3000,
-        hideProgressBar: true,
-        closeOnClick: false,
-        pauseOnHover: true,
-        draggable: true,
-        theme: "colored",
-        transition: Flip,
-      });
-
       router.push("/");
-
-     
+      login(response.token); // ✅ update context with new token
     } catch (err) {
-      const errorMessage =
-        err instanceof Error ? err.message : "An error occurred during login";
-
-      toast.error(errorMessage, {
-        position: "top-right",
-        autoClose: 5000,
-        hideProgressBar: true,
-        closeOnClick: false,
-        pauseOnHover: true,
-        draggable: true,
-        theme: "colored",
-        transition: Flip,
-      });
+      console.log(err);
     }
 
     setSubmitting(false);
@@ -70,11 +46,11 @@ const LoginPage = () => {
           <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-full mb-4">
             <Lock className="w-8 h-8 text-white" />
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-            Welcome Back
+          <h1 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
+            Welcome To Smart Mobile Service
           </h1>
           <p className="text-gray-600 dark:text-gray-400">
-            Sign in to your account. We`ll send you an OTP to verify.
+            Sign in to your account to continue
           </p>
         </div>
 

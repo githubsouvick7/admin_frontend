@@ -1,4 +1,5 @@
 "use client";
+
 import { useEffect, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -10,7 +11,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Plus } from "lucide-react";
+import { Edit, Plus, Trash } from "lucide-react";
 import { toast } from "sonner";
 import ImageUploader from "@/components/layout/ImageUploader";
 import ConfirmDialog from "@/components/layout/ConfirmDialog";
@@ -18,25 +19,19 @@ import { fetcher } from "@/lib/fetcher";
 
 export default function Brands() {
   const [items, setItems] = useState([]);
-  const [name, setName] = useState("");
+  const [search, setSearch] = useState("");
+  const [brandName, setBrandName] = useState("");
   const [image, setImage] = useState("");
   const [editItem, setEditItem] = useState(null);
   const [deleteItem, setDeleteItem] = useState(null);
-  const token =
-    typeof window !== "undefined" ? localStorage.getItem("token") : null;
 
-  // =============================
-  // FETCH ALL BRANDS
-  // =============================
+  // ================= FETCH =================
   const fetchBrands = async () => {
     try {
-      const res = await fetcher(`/api/brand/getBrands`);
-
-      if (!res.ok) throw new Error(res.data.message);
-
+      const res = await fetcher("/api/brand/getBrands");
       setItems(res.data);
     } catch (err) {
-      toast.error(err.message || "Failed to fetch brands");
+      toast.error(err.message);
     }
   };
 
@@ -44,99 +39,172 @@ export default function Brands() {
     fetchBrands();
   }, []);
 
+  // ================= SEARCH FILTER =================
+  const filteredItems = items.filter((item) =>
+    item.brand_name?.toLowerCase().includes(search.toLowerCase()),
+  );
+
+  // ================= ADD =================
   const handleAdd = async (e) => {
     e.preventDefault();
-    if (!name.trim()) return;
+    if (!brandName.trim()) return;
 
     try {
-      const res = await fetcher(`/api/brand/createBrand`, "POST", {
-        name,
+      const res = await fetcher("/api/brand/createBrand", "POST", {
+        brand_name: brandName,
         image,
       });
 
-      if (!res.ok) throw new Error(res.data.message);
-
-      toast.success("Brand added");
-      setName("");
+      setItems((prev) => [res.data, ...prev]);
+      setBrandName("");
       setImage("");
-      fetchBrands();
+      toast.success("Brand added");
     } catch (err) {
-      toast.error(err.message || "Failed to add brand");
+      toast.error(err.message);
     }
   };
 
-  // =============================
-  // UPDATE BRAND
-  // =============================
+  // ================= UPDATE =================
   const handleUpdate = async () => {
-    if (!editItem) return;
-
     try {
       const res = await fetcher(
         `/api/brand/updateBrand/${editItem._id}`,
         "PUT",
-        {
-          name: editItem.name,
-          image: editItem.image,
-        },
+        editItem,
       );
 
-      if (!res.ok) throw new Error(res.data.message);
+      setItems((prev) =>
+        prev.map((item) => (item._id === editItem._id ? res.data : item)),
+      );
 
-      toast.success("Brand updated");
       setEditItem(null);
-      fetchBrands();
+      toast.success("Brand updated");
     } catch (err) {
-      toast.error(err.message || "Failed to update brand");
+      toast.error(err.message);
     }
   };
 
+  // ================= DELETE =================
   const handleDelete = async () => {
-    if (!deleteItem) return;
-
     try {
-      const res = await fetcher(
-        `/api/brand/deleteBrand/${deleteItem._id}`,
-        "DELETE",
-      );
+      await fetcher(`/api/brand/deleteBrand/${deleteItem._id}`, "DELETE");
 
-      if (!res.ok) throw new Error(res.data.message);
+      setItems((prev) => prev.filter((item) => item._id !== deleteItem._id));
 
-      toast.success("Brand deleted");
       setDeleteItem(null);
-      fetchBrands();
+      toast.success("Brand deleted");
     } catch (err) {
-      toast.error(err.message || "Failed to delete brand");
+      toast.error(err.message);
     }
   };
 
   return (
-    <div>
+    <div className="space-y-6">
       {/* ================= ADD BRAND ================= */}
       <form
         onSubmit={handleAdd}
-        className="bg-card border rounded-2xl p-6 mb-6 shadow-sm"
+        className="bg-card border rounded-2xl p-6 shadow-sm"
       >
-        <h3 className="font-semibold mb-4 text-foreground">Add Brand</h3>
+        <h3 className="font-semibold mb-4">Add Brand</h3>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label>Name</Label>
+        <div className="flex items-center gap-4">
+          <div className="space-y-2 w-80">
+            <Label>Brand Name</Label>
             <Input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
+              value={brandName}
+              onChange={(e) => setBrandName(e.target.value)}
               placeholder="Brand name"
             />
           </div>
 
           <ImageUploader value={image} onChange={setImage} />
+          <Button type="submit" className="mt-4">
+            Submit
+          </Button>
+          <Button
+          variant="destructive"
+            type="button"
+            className="mt-4"
+            onClick={() => {
+              setBrandName("");
+              setImage("");
+            }}
+          >
+            Cancel
+          </Button>
+        </div>
+      </form>
+
+      {/* ================= BRAND LIST ================= */}
+      <div className="bg-card border rounded-2xl p-6 shadow-sm">
+        <h3 className="font-semibold mb-4">Brand List</h3>
+
+        {/* Search */}
+        <div className="mb-4">
+          <Input
+            placeholder="Search by brand name..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
         </div>
 
-        <Button type="submit" className="mt-4">
-          <Plus className="h-4 w-4 mr-2" />
-          Add Brand
-        </Button>
-      </form>
+        <table className="w-full border text-sm">
+          <thead>
+            <tr className="bg-muted">
+              <th className="border p-2 text-left">SL</th>
+              <th className="border p-2 text-left">Brand Name</th>
+              <th className="border p-2 text-left">Image</th>
+              <th className="border p-2 text-right">Actions</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {filteredItems.length > 0 ? (
+              filteredItems.map((item, index) => (
+                <tr key={item._id} className="border-b">
+                  <td className=" p-2">{index + 1}</td>
+
+                  <td className=" p-2 font-semibold">{item.brand_name}</td>
+
+                  <td className=" p-2">
+                    {item.image ? (
+                      <img
+                        src={item.image}
+                        alt={item.brand_name}
+                        className="h-10 w-10 object-contain"
+                      />
+                    ) : (
+                      "-"
+                    )}
+                  </td>
+
+                  <td className="flex justify-end items-center p-2 text-end space-x-2">
+                    <button
+                      className="p-2 text-sm border flex gap-2 items-center justify-end rounded-full bg-black text-white"
+                      onClick={() => setEditItem(item)}
+                    >
+                      <Edit className="h-4 w-4" />
+                    </button>
+
+                    <button
+                      className="p-2 text-sm border flex gap-2 items-center justify-end rounded-full bg-red-500 text-white"
+                      onClick={() => setDeleteItem(item)}
+                    >
+                      <Trash className="h-4 w-4" />
+                    </button>
+                  </td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td colSpan="4" className="border p-4 text-center">
+                  No matching brands found
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
 
       {/* ================= EDIT DIALOG ================= */}
       <Dialog open={!!editItem} onOpenChange={() => setEditItem(null)}>
@@ -146,15 +214,15 @@ export default function Brands() {
           </DialogHeader>
 
           <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>Name</Label>
-              <Input
-                value={editItem?.name || ""}
-                onChange={(e) =>
-                  setEditItem({ ...editItem, name: e.target.value })
-                }
-              />
-            </div>
+            <Input
+              value={editItem?.brand_name || ""}
+              onChange={(e) =>
+                setEditItem({
+                  ...editItem,
+                  brand_name: e.target.value,
+                })
+              }
+            />
 
             <ImageUploader
               value={editItem?.image}

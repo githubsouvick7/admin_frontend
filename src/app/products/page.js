@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -19,20 +19,31 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Plus } from "lucide-react";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Edit, Plus, Trash } from "lucide-react";
 import { toast } from "sonner";
 import ImageUploader from "@/components/layout/ImageUploader";
 import ConfirmDialog from "@/components/layout/ConfirmDialog";
 import { fetcher } from "@/lib/fetcher";
-
-const BASE_URL = "http://localhost:5000/api/product"; // change if needed
+import { MultiSelect } from "@/components/ui/multiselectDropdown";
 
 export default function Products() {
-  const [items, setItems] = useState([]);
+  const [products, setProducts] = useState([]);
+  const [brands, setBrands] = useState([]);
+  const [models, setModels] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [search, setSearch] = useState("");
 
   const [form, setForm] = useState({
-    brandId: "",
-    modelId: "",
+    brandIds: [],
+    modelIds: [],
     categoryId: "",
     name: "",
     amount: "",
@@ -43,40 +54,74 @@ export default function Products() {
   const [editItem, setEditItem] = useState(null);
   const [deleteItem, setDeleteItem] = useState(null);
 
-  const refresh = async () => {
-    try {
-      const res = await fetcher(`/api/product/getProducts`);
-      setItems(res.data);
-    } catch (err) {
-      toast.error("Failed to fetch products");
-    }
-  };
+  /* ================= FETCH ================= */
 
   useEffect(() => {
-    refresh();
+    const fetchInitialData = async () => {
+      try {
+        const [productRes, modelRes, brandRes, categoryRes] = await Promise.all(
+          [
+            fetcher("/api/product/getProducts"),
+            fetcher("/api/model/getModels"),
+            fetcher("/api/brand/getBrands"),
+            fetcher("/api/category/getCategories"),
+          ],
+        );
+
+        setProducts(productRes.data);
+        setModels(modelRes.data);
+        setBrands(brandRes.data);
+        setCategories(categoryRes.data);
+      } catch {
+        toast.error("Failed to fetch data");
+      }
+    };
+
+    fetchInitialData();
   }, []);
+
+  const refreshProducts = async () => {
+    const res = await fetcher("/api/product/getProducts");
+    setProducts(res.data);
+  };
+
+  /* ================= FILTER MODELS ================= */
+
+  const filteredModels = models.filter((m) =>
+    form.brandIds.includes(m.brand_id?._id),
+  );
+
+  /* ================= ADD PRODUCT ================= */
 
   const handleAdd = async (e) => {
     e.preventDefault();
-    if (!form.name.trim()) return;
+
+    if (
+      !form.name ||
+      !form.brandIds.length ||
+      !form.modelIds.length ||
+      !form.categoryId
+    ) {
+      toast.error("All required fields must be filled");
+      return;
+    }
 
     try {
-      const res = await fetcher("/api/product/createProduct", "post", {
-        brand_id: form.brandId,
-        model_id: form.modelId,
+      await fetcher("/api/product/createProduct", "post", {
+        brand_ids: form.brandIds,
+        model_ids: form.modelIds,
         category_id: form.categoryId,
         product_name: form.name,
         product_image: form.image,
         amount: Number(form.amount),
         description: form.description,
       });
-      if (!res.ok) throw new Error();
 
       toast.success("Product added");
 
       setForm({
-        brandId: "",
-        modelId: "",
+        brandIds: [],
+        modelIds: [],
         categoryId: "",
         name: "",
         amount: "",
@@ -84,65 +129,94 @@ export default function Products() {
         image: "",
       });
 
-      refresh();
-    } catch (err) {
+      refreshProducts();
+    } catch {
       toast.error("Failed to add product");
     }
   };
 
-  const handleUpdate = async () => {
-    if (!editItem) return;
-
-    try {
-      const res = await fetcher(
-        `/api/product/updateProduct/${editItem._id}`,
-        "put",
-        {
-          brand_id: editItem.brand_id,
-          model_id: editItem.model_id,
-          category_id: editItem.category_id,
-          product_name: editItem.product_name,
-          product_image: editItem.product_image,
-          amount: Number(editItem.amount),
-          description: editItem.description,
-        },
-      );
-
-      toast.success("Product updated");
-      setEditItem(null);
-      refresh();
-    } catch (err) {
-      toast.error("Failed to update product");
-    }
-  };
+  /* ================= DELETE ================= */
 
   const handleDelete = async () => {
     if (!deleteItem) return;
 
-    try {
-      const res = await fetcher(
-        `/api/product/deleteProduct/${deleteItem._id}`,
-        "delete",
-      );
+    await fetcher(`/api/product/deleteProduct/${deleteItem._id}`, "delete");
 
-      if (!res.ok) throw new Error();
-      toast.success("Product deleted");
-      setDeleteItem(null);
-      refresh();
-    } catch (err) {
-      toast.error("Failed to delete product");
-    }
+    toast.success("Product deleted");
+    setDeleteItem(null);
+    refreshProducts();
   };
+
+  /* ================= FILTER PRODUCTS ================= */
+
+  const filteredProducts = useMemo(() => {
+    return products.filter((p) =>
+      p.product_name.toLowerCase().includes(search.toLowerCase()),
+    );
+  }, [products, search]);
+
+  /* ================= UI ================= */
 
   return (
     <div>
+      {/* ================= ADD FORM ================= */}
+
       <form
         onSubmit={handleAdd}
         className="bg-card border rounded-2xl p-6 mb-6 shadow-sm"
       >
-        <h3 className="font-semibold mb-4 text-foreground">Add Product</h3>
+        <h3 className="font-semibold mb-4">Add Product</h3>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid md:grid-cols-3 gap-4">
+          {/* Brand Multi Select */}
+          <div className="space-y-2">
+            <Label>Brand</Label>
+            <MultiSelect
+              options={brands}
+              value={form.brandIds}
+              onChange={(val) =>
+                setForm({ ...form, brandIds: val, modelIds: [] })
+              }
+              placeholder="Select Brand"
+              valueKey="_id"
+              labelKey="brand_name"
+            />
+          </div>
+
+          {/* Model Multi Select */}
+          <div className="space-y-2">
+            <Label>Model</Label>
+            <MultiSelect
+              options={filteredModels}
+              value={form.modelIds}
+              onChange={(val) => setForm({ ...form, modelIds: val })}
+              placeholder="Select Model"
+              valueKey="_id"
+              labelKey="model_name"
+            />
+          </div>
+
+          {/* Category */}
+          <div className="space-y-2">
+            <Label>Category</Label>
+            <Select
+              value={form.categoryId}
+              onValueChange={(val) => setForm({ ...form, categoryId: val })}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select Category" />
+              </SelectTrigger>
+              <SelectContent>
+                {categories.map((cat) => (
+                  <SelectItem key={cat._id} value={cat._id}>
+                    {cat.category_name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Name */}
           <div className="space-y-2">
             <Label>Product Name</Label>
             <Input
@@ -151,6 +225,7 @@ export default function Products() {
             />
           </div>
 
+          {/* Amount */}
           <div className="space-y-2">
             <Label>Amount</Label>
             <Input
@@ -170,12 +245,7 @@ export default function Products() {
           <Label>Description</Label>
           <Textarea
             value={form.description}
-            onChange={(e) =>
-              setForm({
-                ...form,
-                description: e.target.value,
-              })
-            }
+            onChange={(e) => setForm({ ...form, description: e.target.value })}
           />
         </div>
 
@@ -185,109 +255,59 @@ export default function Products() {
         </Button>
       </form>
 
-      <div className="grid md:grid-cols-3 gap-4">
-        {items?.map((item) => (
-          <div
-            key={item._id}
-            className="border rounded-xl p-4 flex justify-between items-center"
-          >
-            <div>
-              <p className="font-medium">{item.product_name}</p>
-              <p className="text-sm text-muted-foreground">₹ {item.amount}</p>
-            </div>
+      {/* ================= SEARCH ================= */}
 
-            <div className="flex gap-2">
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => setEditItem(item)}
-              >
-                Edit
-              </Button>
-              <Button
-                size="sm"
-                variant="destructive"
-                onClick={() => setDeleteItem(item)}
-              >
-                Delete
-              </Button>
-            </div>
-          </div>
-        ))}
+      <div className="mb-4">
+        <Input
+          placeholder="Search product..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
       </div>
 
-      {/* ✅ Edit Product Dialog */}
-      <Dialog open={!!editItem} onOpenChange={() => setEditItem(null)}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Edit Product</DialogTitle>
-          </DialogHeader>
+      {/* ================= TABLE ================= */}
 
-          <div className="space-y-4">
-            {/* Product Name */}
-            <div className="space-y-2">
-              <Label>Product Name</Label>
-              <Input
-                value={editItem?.product_name || ""}
-                onChange={(e) =>
-                  setEditItem({
-                    ...editItem,
-                    product_name: e.target.value,
-                  })
-                }
-              />
-            </div>
+      <div className="border rounded-xl">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Name</TableHead>
+              <TableHead>Brand</TableHead>
+              <TableHead>Model</TableHead>
+              <TableHead>Category</TableHead>
+              <TableHead>Amount</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
 
-            {/* Amount */}
-            <div className="space-y-2">
-              <Label>Amount</Label>
-              <Input
-                type="number"
-                value={editItem?.amount || ""}
-                onChange={(e) =>
-                  setEditItem({
-                    ...editItem,
-                    amount: e.target.value,
-                  })
-                }
-              />
-            </div>
+          <TableBody>
+            {filteredProducts.map((item) => (
+              <TableRow key={item._id}>
+                <TableCell>{item.product_name}</TableCell>
+                <TableCell>{item.brand_id?.brand_name}</TableCell>
+                <TableCell>{item.model_id?.model_name}</TableCell>
+                <TableCell>{item.category_id?.category_name}</TableCell>
+                <TableCell>₹ {item.amount}</TableCell>
+                <TableCell className="text-right flex items-center justify-end space-x-2">
+                  <button
+                    className="p-2 text-sm border flex gap-2 items-center justify-end rounded-full bg-black text-white"
+                    onClick={() => setEditItem(item)}
+                  >
+                    <Edit className="h-4 w-4" />
+                  </button>
 
-            {/* Description */}
-            <div className="space-y-2">
-              <Label>Description</Label>
-              <Textarea
-                value={editItem?.description || ""}
-                onChange={(e) =>
-                  setEditItem({
-                    ...editItem,
-                    description: e.target.value,
-                  })
-                }
-              />
-            </div>
-
-            {/* Image */}
-            <ImageUploader
-              value={editItem?.product_image}
-              onChange={(img) =>
-                setEditItem({
-                  ...editItem,
-                  product_image: img,
-                })
-              }
-            />
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setEditItem(null)}>
-              Cancel
-            </Button>
-
-            <Button onClick={handleUpdate}>Save Changes</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+                  <button
+                    className="p-2 text-sm border flex gap-2 items-center justify-end rounded-full bg-red-500 text-white"
+                    onClick={() => setDeleteItem(item)}
+                  >
+                    <Trash className="h-4 w-4" />
+                  </button>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
 
       <ConfirmDialog
         open={!!deleteItem}

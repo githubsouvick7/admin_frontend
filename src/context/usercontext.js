@@ -8,17 +8,21 @@ const UserContext = createContext(null);
 export const UserProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [token, setToken] = useState(null); // ✅ token in state
 
-  // =============================
-  // Fetch Profile
-  // =============================
+  useEffect(() => {
+    const storedToken = localStorage.getItem("token");
+    if (storedToken) {
+      setToken(storedToken);
+    } else {
+      setLoading(false);
+    }
+  }, []);
+
   const fetchProfile = async () => {
     try {
       const data = await fetcher("/api/auth/profile");
-
-      setUser({
-        adminId: data.adminId,
-      });
+      setUser({ adminId: data.adminId });
     } catch (error) {
       setUser(null);
     } finally {
@@ -26,32 +30,20 @@ export const UserProvider = ({ children }) => {
     }
   };
 
-  // =============================
-  // On Mount
-  // =============================
   useEffect(() => {
-    const token = localStorage.getItem("token");
-
     if (token) {
       fetchProfile();
-    } else {
-      setLoading(false);
     }
-  }, []);
+  }, [token]); // ✅ now this works correctly
 
-  // =============================
-  // Login
-  // =============================
-  const login = async (token) => {
-    localStorage.setItem("token", token);
-    await fetchProfile();
+  const login = async (newToken) => {
+    localStorage.setItem("token", newToken);
+    setToken(newToken); // ✅ trigger re-render
   };
 
-  // =============================
-  // Logout
-  // =============================
   const logout = () => {
     localStorage.removeItem("token");
+    setToken(null);
     setUser(null);
     window.location.href = "/login";
   };
